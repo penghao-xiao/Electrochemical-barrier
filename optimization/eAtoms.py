@@ -32,6 +32,7 @@ class eAtoms(Atoms):
         self.vtot  = 0.0 # average electrostatic potential
         self.direction = 'z'
         self.solPoisson = solPoisson
+        self.Jacobian  = self.natom**0.5
         Atoms.__init__(self,atomsx)
 
     def get_positions(self):
@@ -54,7 +55,7 @@ class eAtoms(Atoms):
         #f    = self.atomsx.get_forces()
         self.get_vtot()
         #Fc   = np.concatenate((f, self.mue))
-        Fc   = np.vstack((f, self.mue))
+        Fc   = np.vstack((f, self.mue*self.Jacobian))
         return Fc
     
     def get_potential_energy(self, force_consistent=False):
@@ -153,7 +154,11 @@ class eAtoms(Atoms):
         if self.solPoisson:
             self.vtot = -vacuumE
         else:
-            self.vtot = numpy.average(average-vacuumE)
+            vtot_new = np.average(average-vacuumE)
+            try: self.vtot0 += 0 # if vtot0 exists, do nothing
+            except: self.vtot0 = vtot_new # save the first vtot_new as vtot0
+                                          # start from zero charge for absolute energy reference
+            self.vtot = (vtot_new + self.vtot0)*0.5
         self.mue[0][0]  = self.epotential - (self._calc.get_fermi_level() - vacuumE)
         print("mu of electron: ", self.mue)
         print("number of electrons: ", self.ne)
