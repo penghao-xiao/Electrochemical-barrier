@@ -1,6 +1,6 @@
 """
 The (electrochemical) nudged elastic path, (e)neb, module.
-Author: Penghao Xiao (pxiao@utexas.edu)
+Contact: Penghao Xiao (pxiao@utexas.edu)
 Version: 1.0
 Reference: coming soon
 Usage: move the slab to the center of the box first, as in eAtoms.py
@@ -300,7 +300,12 @@ class eneb:
         if self.solPoisson:
             self.path[imgi].vtot = -vacuumE
         else:
+            # xph: for relative energy difference along the path, the following is enough
             self.path[imgi].vtot = numpy.average(average-vacuumE)
+            # xph: integrate from zero charge for an absolute energy reference
+            # need extra codes in __init__ to calculate the ne0 reference
+            #vtot_new = numpy.average(average-vacuumE)
+            #self.path[imagi].vtot = (vtot_new + self.path[imagi].vtot0)*0.5
         self.path[imgi].mue[0][0]  = self.epotential - (self.path[imgi]._calc.get_fermi_level() - vacuumE)
         print("image {}, mu of electron: {}, number of electrons: {} ".format(imgi, self.path[imgi].mue[0][0], self.path[imgi].ne))
         #print "done."

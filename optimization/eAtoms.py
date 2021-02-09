@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 Generalized Atoms calss for optimization of geometry and number of electrons simultaneously under constant voltage
-Author: Penghao Xiao (pxiao@utexas.edu)
+Contact: Penghao Xiao (pxiao@utexas.edu)
 Version: 1.0
 Usage: first set the vacuum/solution along z axis and move the slab to the center of the simulation box
 Please cite the following reference:
@@ -14,7 +14,7 @@ from ase.calculators.vasp import VaspChargeDensity
 import numpy as np
 
 class eAtoms(Atoms):
-    def __init__(self, atomsx, n0, epotential=0.0, solPoisson=True):
+    def __init__(self, atomsx, epotential=0.0, solPoisson=True, weight=1.0):
         """ relaxation under constant electrochemical potential
             epotential ... electrochemical potential: the work function of the counter electrode under the given potential
                          i.e. potential vs. SHE + workfunction of SHE
@@ -22,28 +22,27 @@ class eAtoms(Atoms):
                          False corresponds to uniform background charge;
         """
         self.atomsx = atomsx 
-        self.epotential= -epotential - 4.6
 
+        self.epotential= -epotential - 4.6
         self.natom = atomsx.get_number_of_atoms()
-        self.n0       = n0 # number of electrons at 0 charge
         self.ne       = np.zeros((1,3)) # number of electrons
-        self.ne[0][0] = n0 
         self.mue      = np.zeros((1,3)) # electron mu, dE/dne
         self.vtot  = 0.0 # average electrostatic potential
         self.direction = 'z'
         self.solPoisson = solPoisson
-        self.Jacobian  = self.natom**0.5
+        self.weight = weight
+        self.jacobian = self.weight
+
         Atoms.__init__(self,atomsx)
 
     def get_positions(self):
         r    = self.atomsx.get_positions()
-        #Rc   = np.concatenate((r, self.ne))
-        Rc   = np.vstack((r, self.ne))
+        Rc   = np.vstack((r, self.ne * self.jacobian))
         return Rc
 
     def set_positions(self,newr):
         ratom   = newr[:-1]
-        self.ne[0][0] = newr[-1][0]
+        self.ne[0][0] = newr[-1][0] / self.jacobian
         self.atomsx.set_positions(ratom)
         self._calc.set(nelect = self.ne[0][0])
 
@@ -55,15 +54,27 @@ class eAtoms(Atoms):
         #f    = self.atomsx.get_forces()
         self.get_vtot()
         #Fc   = np.concatenate((f, self.mue))
-        Fc   = np.vstack((f, self.mue*self.Jacobian))
+        Fc   = np.vstack((f, self.mue / self.jacobian))
         return Fc
     
     def get_potential_energy(self, force_consistent=False):
         E0 = self.atomsx.get_potential_energy(force_consistent)
+        try: 
+           self.n0
+        except:
+           nel = self._calc.get_default_number_of_electrons()
+           nel_d = {}
+           for el in nel:
+              nel_d[el[0]] = el[1]
+           self.n0 = int(sum([nel_d[atom.symbol] for atom in self.atomsx])) # number of electrons at 0 charge
+           print("zero charge electrons, n0:", self.n0)
+
+        if self.ne[0][0] < 0.01: self.ne[0][0] = self._calc.get_number_of_electrons()
         E0 += (self.ne[0][0]-self.n0) * (-self.epotential + self.vtot)
         return E0
 
     def get_vtot(self):
+        # the initial guess for ne is passed through the calculator
         self.ne[0][0] = self._calc.get_number_of_electrons()
         # First specify location of LOCPOT 
         LOCPOTfile = 'LOCPOT'
@@ -157,8 +168,8 @@ class eAtoms(Atoms):
             vtot_new = np.average(average-vacuumE)
             try: self.vtot0 += 0 # if vtot0 exists, do nothing
             except: self.vtot0 = vtot_new # save the first vtot_new as vtot0
-                                          # start from zero charge for absolute energy reference
-            self.vtot = (vtot_new + self.vtot0)*0.5
+                                          # start from zero charge for absolute reference
+            self.vtot = (self.vtot0 + vtot_new)*0.5
         self.mue[0][0]  = self.epotential - (self._calc.get_fermi_level() - vacuumE)
         print("mu of electron: ", self.mue)
         print("number of electrons: ", self.ne)
