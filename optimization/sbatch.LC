@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -p pbatch
-#SBATCH -A corrctl
-#SBATCH -t 02:30:00
-#SBATCH -J ssneb_FeO_rs-corundum_path1
+#SBATCH -A bank
+#SBATCH -t 00:30:00
+#SBATCH -J eAtoms_test
 
 #module load intel mkl fftw
 #srun -c 1 /usr/gapps/qsg/VASP/bin/vasp_dev_quartz5_5.4.4_TST_new_xray_patched
