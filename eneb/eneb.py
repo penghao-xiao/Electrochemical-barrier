@@ -300,10 +300,11 @@ class eneb:
         if self.solPoisson:
             self.path[imgi].vtot = -vacuumE
         else:
-            # xph: for relative energy difference along the path, the following is enough
-            self.path[imgi].vtot = numpy.average(average-vacuumE)
+            # assume vtot0 at zero charge have similar magnitudes along the path,
+            # then for relative energy difference, vtot0 can be ignored
+            self.path[imgi].vtot = numpy.average(average-vacuumE)*0.5
             # xph: integrate from zero charge for an absolute energy reference
-            # need extra codes in __init__ to calculate the ne0 reference
+            # need post processing to calculate the vtot0 for the relaxed structure
             #vtot_new = numpy.average(average-vacuumE)
             #self.path[imagi].vtot = (vtot_new + self.path[imagi].vtot0)*0.5
         self.path[imgi].mue[0][0]  = self.epotential - (self.path[imgi]._calc.get_fermi_level() - vacuumE)
