@@ -1,11 +1,10 @@
 # Electrochemical-barrier
 This packages perform structure optimization and saddle search under constant potential.
-by Penghao Xiao
 
 Install:
  1. make sure VASPsol is compided
  2. pip3 install ASE
- 3. set ASE with VASPsol as the binary, see script/run_vasp.py for the srun setting
+ 3. set ASE with VASPsol as the binary, see script/run_vasp.py for the srun/mpirun setting
     (potcar files and others, see https://wiki.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables)
 
 Usage:
@@ -20,9 +19,9 @@ Usage:
    structure of each image, ?.CON, is updated on the fly. To continue from an existing path, uncomment the lines in run_eneb_vasp.py that read in the path from *.CON and resubmit the script again.
 5. check the MEP:
    tail -7 mep.out > neb.dat
-   run nebspline.pl from VTSTSCRIPTS
-   The above two lines will produce mep.eps as from a regular NEB run in VTSTcode
+   nebspline.pl (from the VTSTSCRIPTS)
+   The above two commands will produce mep.eps as from a regular NEB run in VTSTcode
 
 
 References:
-  coming soon
+  Z. Duan and P. Xiao, Simulation of Potential-Dependent Activation Energies in Electrocatalysis: Mechanism of O−O Bond Formation on RuO2, ACS (2021).
