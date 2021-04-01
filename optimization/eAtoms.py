@@ -14,16 +14,15 @@ from ase.calculators.vasp import VaspChargeDensity
 import numpy as np
 
 class eAtoms(Atoms):
-    def __init__(self, atomsx, epotential=0.0, solPoisson=True, weight=1.0):
+    def __init__(self, atomsx, voltage=0.0, solPoisson=True, weight=1.0):
         """ relaxation under constant electrochemical potential
-            epotential ... electrochemical potential: the work function of the counter electrode under the given potential
-                         i.e. potential vs. SHE + workfunction of SHE
-            solPoisson.. True corresponds to compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
-                         False corresponds to uniform background charge;
+            voltage ...  The applied voltage wrt SHE
+            solPoisson.. True corresponds to setting the compensate charge in solvent, where VASPsol is required with lambda_d_k=3.0; 
+                         False corresponds to using the uniform background charge and correction scheme by the Neurock group;
         """
         self.atomsx = atomsx 
-
-        self.epotential= -epotential - 4.6
+        #epotential(phi) is the effective electric potential under the given voltage
+        self.epotential= -voltage - 4.6
         self.natom = atomsx.get_number_of_atoms()
         self.ne       = np.zeros((1,3)) # number of electrons
         self.mue      = np.zeros((1,3)) # electron mu, dE/dne
@@ -76,6 +75,9 @@ class eAtoms(Atoms):
     def get_vtot(self):
         # the initial guess for ne is passed through the calculator
         self.ne[0][0] = self._calc.get_number_of_electrons()
+
+        # the following part is adjusted from vtotav.py in ase_tools
+        # https://github.com/compphys/ase_tools/blob/master/scripts/vtotav.py
         # First specify location of LOCPOT 
         LOCPOTfile = 'LOCPOT'
         # Next the direction to make average in 

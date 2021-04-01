@@ -64,8 +64,8 @@ class eneb:
             ne1......... number of electrons for the initial state at epotential
             ne2......... number of electrons for the final state at epotential
             vtot........ average Coulomb potential, to compensate the background charge in VASP
-            solPoisson.. True corresponds to compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
-                         False corresponds to uniform background charge;
+            solPoisson.. True corresponds to setting the compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
+                         False corresponds to using the uniform background charge and the correction scheme from the Neurock group;
         """
 
         self.numImages = numImages
@@ -211,6 +211,8 @@ class eneb:
 
     def get_vtot(self, imgi):
         #self.path[imgi].ne = self.path[imgi]._calc.get_number_of_electrons()
+        # the following part is adjusted from vtotav.py in ase_tools
+        # https://github.com/compphys/ase_tools/blob/master/scripts/vtotav.py
         # First specify location of LOCPOT 
         LOCPOTfile = 'LOCPOT'
         # Next the direction to make average in 
