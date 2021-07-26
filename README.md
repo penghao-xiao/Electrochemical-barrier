@@ -1,5 +1,5 @@
 # Electrochemical-barrier
-This packages perform structure optimization and saddle search under constant potential.
+This package performs structure optimization and saddle search under constant potential.
 
 Install:
  1. make sure VASPsol is compided
