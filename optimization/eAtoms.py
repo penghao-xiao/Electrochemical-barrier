@@ -61,11 +61,8 @@ class eAtoms(Atoms):
         try: 
            self.n0
         except:
-           nel = self._calc.get_default_number_of_electrons()
-           nel_d = {}
-           for el in nel:
-              nel_d[el[0]] = el[1]
-           self.n0 = int(sum([nel_d[atom.symbol] for atom in self.atomsx])) # number of electrons at 0 charge
+           # from ASE 3.22.0
+           self.n0 = self._calc.default_nelect_from_ppp() # number of electrons at 0 charge
            print("zero charge electrons, n0:", self.n0)
 
         if self.ne[0][0] < 0.01: self.ne[0][0] = self._calc.get_number_of_electrons()
