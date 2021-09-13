@@ -5,5 +5,5 @@
 #SBATCH -t 00:30:00
 #SBATCH -J eneb_test
 
-#python constV_opt.py
-python run_eneb-vasp.py
+#python3-3.6.4 constV_opt.py
+python3-3.6.4 run_eneb-vasp.py

@@ -4,7 +4,7 @@
 Neb optimization example
 '''
 
-from eneb import eneb, qm_essneb
+from ecb.eneb import eneb, qm_essneb
 #from tsase.calculators.vasp_ext import Vasp
 from ase.calculators.vasp import Vasp
 from ase.io import read
@@ -16,13 +16,13 @@ p2 = read('6.CON',format='vasp')
 #calc = LAMMPS(parameters=parameters, tmp_dir="trash")
 calc = Vasp(prec = 'Normal', 
             ediff = 1e-5,
-            #kpts = (3,3,1),
+            #kpts = (2,2,1),
             kpts = (1,1,1),
             gamma = True,
             xc = 'rPBE',
             lcharg = False,
             isym = 0,
-            npar = 8,
+            npar = 6,
             nsim = 4,
             lreal= 'Auto',
             algo= 'Normal',
@@ -44,15 +44,11 @@ p2.set_calculator(calc)
 ####################################################
 calc.initialize(p1)
 calc.write_potcar()
-nel = calc.read_default_number_of_electrons()
-nel_d = {}
-for el in nel:
-    nel_d[el[0]] = el[1]
-nelect0 = int(sum([nel_d[atom.symbol] for atom in p1]))
+nelect0 = calc.default_nelect_from_ppp()
 ####################################################
 
 nim = 7
-band = eneb(p1, p2, numImages = nim, ne1=317.6758, ne2=318.2161, ne0=nelect0, epotential=-1.0, method='ci')
+band = eneb(p1, p2, numImages = nim, ne1=317.6758, ne2=318.2161, ne0=nelect0, voltage=-1.0, method='ci')
 # read images from the last run
 '''
 for i in range(1,nim-1):
