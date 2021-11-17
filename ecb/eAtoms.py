@@ -14,16 +14,16 @@ from .read_LOCPOT import align_vacuum
 import numpy as np
 
 class eAtoms(Atoms):
-    def __init__(self, atomsx, epotential=0.0, solPoisson=True, weight=1.0):
+    def __init__(self, atomsx, voltage=0.0, solPoisson=True, weight=1.0):
         """ relaxation under constant electrochemical potential
-            epotential ... electrochemical potential: the work function of the counter electrode under the given potential
-                         i.e. potential vs. SHE + workfunction of SHE
+            epotential ... electrochemical potential: the work function of the counter electrode under the given voltage
+                         i.e. voltage vs. SHE + workfunction of SHE
             solPoisson.. True corresponds to compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
                          False corresponds to uniform background charge;
         """
         self.atomsx = atomsx 
 
-        self.epotential= -epotential - 4.6
+        self.epotential= -voltage - 4.6
         self.natom = atomsx.get_number_of_atoms()
         self.ne       = np.zeros((1,3)) # number of electrons
         self.mue      = np.zeros((1,3)) # electron mu, dE/dne
