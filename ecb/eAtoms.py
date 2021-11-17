@@ -51,9 +51,7 @@ class eAtoms(Atoms):
 
     def get_forces(self,apply_constraint=True):
         f    = self.atomsx.get_forces(apply_constraint)
-        #f    = self.atomsx.get_forces()
         self.get_mue()
-        #Fc   = np.concatenate((f, self.mue))
         Fc   = np.vstack((f, self.mue / self.jacobian))
         return Fc
     
@@ -65,14 +63,6 @@ class eAtoms(Atoms):
         try: 
            self.n0
         except:
-           # before ASE 3.22.0
-           '''
-           nel = self._calc.get_default_number_of_electrons()
-           nel_d = {}
-           for el in nel:
-              nel_d[el[0]] = el[1]
-           self.n0 = int(sum([nel_d[atom.symbol] for atom in self.atomsx])) # number of electrons at 0 charge
-           '''
            # from ASE 3.22.0
            self.n0 = self._calc.default_nelect_from_ppp() # number of electrons at 0 charge
            print("zero charge electrons, n0:", self.n0)
