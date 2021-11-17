@@ -47,7 +47,7 @@ calc = Vasp(prec = 'Normal',
 p1.set_calculator(calc)
 #print p1.get_potential_energy()
 
-p1box = eAtoms(p1, epotential = -1.0)
+p1box = eAtoms(p1, voltage = -1.0)
 
 # for ase.3.15 and later
 dyn = FIRE(p1box,maxmove = 0.1, dt = 0.1, dtmax = 0.1, force_consistent = False)
