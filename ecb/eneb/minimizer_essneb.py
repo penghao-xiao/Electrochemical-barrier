@@ -2,7 +2,7 @@
 ssneb mimizer superclass
 '''
 
-from util import vmag, sPBC
+from .util import vmag, sPBC
 from ase import io
 from numpy import dot,sqrt,vdot
 

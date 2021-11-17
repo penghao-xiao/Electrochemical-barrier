@@ -1,6 +1,6 @@
 
-from util import vdot,vmag,vunit
-from minimizer_essneb import minimizer_ssneb
+from .util import vdot,vmag,vunit
+from .minimizer_essneb import minimizer_ssneb
 import numpy as np
 
 class fire_essneb(minimizer_ssneb):

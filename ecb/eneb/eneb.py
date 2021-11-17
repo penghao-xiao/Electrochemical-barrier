@@ -1,8 +1,8 @@
 """
 The (electrochemical) nudged elastic path, (e)neb, module.
-Contact: Penghao Xiao (pxiao@utexas.edu)
+Contact: Penghao Xiao (pxiao@dal.ca)
 Version: 1.0
-Reference: coming soon
+Reference: J. Phys. Chem. C 2021, 125, 28, 15243-15250
 Usage: move the slab to the center of the box first, as in eAtoms.py
 
 NEB under constant electrochemical potential, U, where number of electrons is 
@@ -26,9 +26,9 @@ import numpy
 import os,sys
 from copy import deepcopy
 from math import sqrt, atan, pi
-from util import vmag, vunit, vproj, vdot, sPBC, vmag2
+from .util import vmag, vunit, vproj, vdot, sPBC, vmag2
 from ase import atoms, units
-from ase.calculators.vasp import VaspChargeDensity
+from ..read_LOCPOT import align_vacuum
 
 class eneb:
     """
@@ -38,7 +38,7 @@ class eneb:
     def __init__(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       \
                  dneb = False, dnebOrg = False, method = 'normal',            \
                  onlyci = False, weight = 1, parallel = False, ss = False,    \
-                 eneb = True, epotential = 0.0, ne1=0.0, ne2=0.0, ne0=0.0, eweight=0.0, solPoisson=True,\
+                 eneb = True, voltage=0.0, Ef_ref = -4.6, ne1=0.0, ne2=0.0, ne0=0.0, eweight=0.0, solPoisson=True,\
                  express = numpy.zeros((3,3)), fixstrain = numpy.ones((3,3)) ):
         """
         The neb constructor.
@@ -59,13 +59,15 @@ class eneb:
                          unit of GPa
             fixstrain... 3*3 matrix as express. 
             eneb........ boolean, number of electrons change  or not 
-            epotential.. electrochemical potential: the work function of the conter electrode under the given potential
+            voltage..... applied voltage wrt the reference electrode
+            Ef_ref...... Fermi level of the reference electrode. Default: -4.6 for SHE
             ne0......... number of electrons at zero charge
             ne1......... number of electrons for the initial state at epotential
             ne2......... number of electrons for the final state at epotential
             vtot........ average Coulomb potential, to compensate the background charge in VASP
-            solPoisson.. True corresponds to setting the compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
-                         False corresponds to using the uniform background charge and the correction scheme from the Neurock group;
+            solPoisson.. True  - set compensate charges in the solvent, where VASPsol is required with lambda_d_k=3.0; 
+                         False - use uniform background charges and the correction scheme from the Neurock group (PRB 73, 165402 (2006));
+                                 False needs to start the integration from zero charge for a common reference, still under test.
         """
 
         self.numImages = numImages
@@ -87,7 +89,7 @@ class eneb:
                print("warning: xy, xz, yz components of the external pressure will be set to zero")
         self.fixstrain = fixstrain
         self.eneb      = eneb
-        self.epotential= -epotential-4.6
+        self.epotential= -voltage + Ef_ref #electrochemical potential: the work function of the conter electrode under voltage
         self.ne0 = ne0 # number of electrons at zero charge
         self.eweight = eweight
         self.solPoisson = solPoisson
@@ -181,7 +183,7 @@ class eneb:
             if self.ss: stt = self.path[i].get_stress()
             if self.eneb: 
                 self.path[i].mue = numpy.zeros((1,3))
-                self.get_vtot(i)
+                self.get_mue(i)
                 # calculate the eU term and energy correction in electrochemical constant voltage setting
                 self.path[i].u += (self.path[i].ne-self.ne0) * (-self.epotential + self.path[i].vtot)
             os.chdir(backfd)
@@ -209,106 +211,21 @@ class eneb:
                 #print "i,pv:",i,pv
             self.path[i].u += pv
 
-    def get_vtot(self, imgi):
+    def get_mue(self, imgi):
         #self.path[imgi].ne = self.path[imgi]._calc.get_number_of_electrons()
-        # the following part is adjusted from vtotav.py in ase_tools
-        # https://github.com/compphys/ase_tools/blob/master/scripts/vtotav.py
-        # First specify location of LOCPOT 
-        LOCPOTfile = 'LOCPOT'
-        # Next the direction to make average in 
-        # input should be x y z, or X Y Z. Default is Z.
-        allowed = "xyzXYZ"
-        if allowed.find(self.direction) == -1 or len(self.direction)!=1 :
-           print("** WARNING: The direction was input incorrectly.")
-           print("** Setting to z-direction by default.") 
-        if self.direction.islower():
-           self.direction = self.direction.upper()
-        filesuffix = "_%s" % self.direction
 
-        # Open geometry and density class objects
-        #-----------------------------------------
-        vasp_charge = VaspChargeDensity(filename = LOCPOTfile)
-        potl = vasp_charge.chg[-1]
-        del vasp_charge
+        # aligh the vacuum level and get the potential shift due to the compensating charge
+        # vacuumE is used when the charge is compensated in solvent by VSAPsol
+        # vtot_new is integrated when the charge is compensated by uniform background charge
+        vacuumE, vtot_new = align_vacuum(direction = self.direction, LOCPOTfile='LOCPOT')
 
-        # For LOCPOT files we multiply by the volume to get back to eV
-        potl=potl*self.path[imgi].get_volume()
-
-        print("\nReading file: %s" % LOCPOTfile)
-        print("Performing average in %s direction" % self.direction)
-
-        # lattice parameters and scale factor
-        #---------------------------------------------
-        cell = self.path[imgi].cell
-
-        # Find length of lattice vectors
-        #--------------------------------
-        latticelength = numpy.dot(cell, cell.T).diagonal()
-        latticelength = latticelength**0.5
-
-        # Read in potential data
-        #------------------------
-        ngridpts = numpy.array(potl.shape)
-        totgridpts = ngridpts.prod()
-        #print "Potential stored on a %dx%dx%d grid" % (ngridpts[0],ngridpts[1],ngridpts[2])
-        #print "Total number of points is %d" % totgridpts
-        #print "Reading potential data from file...",
-        #sys.stdout.flush()
-        #print "done." 
-
-        # Perform average
-        #-----------------
-        if self.direction=="X":
-           idir = 0
-           a = 1
-           b = 2
-        elif self.direction=="Y":
-           a = 0
-           idir = 1
-           b = 2
-        else:
-           a = 0
-           b = 1
-           idir = 2
-        a = (idir+1)%3
-        b = (idir+2)%3
-        # At each point, sum over other two indices
-        average = numpy.zeros(ngridpts[idir],numpy.float)
-        for ipt in range(ngridpts[idir]):
-           if self.direction=="X":
-              average[ipt] = potl[ipt,:,:].sum()
-           elif self.direction=="Y":
-              average[ipt] = potl[:,ipt,:].sum()
-           else:
-              average[ipt] = potl[:,:,ipt].sum()
-
-        # Scale by number of grid points in the plane.
-        # The resulting unit will be eV.
-        average /= ngridpts[a]*ngridpts[b]
-
-        # Print out average
-        #-------------------
-        averagefile = LOCPOTfile + filesuffix
-        #print "Writing averaged data to file %s..." % averagefile,
-        #sys.stdout.flush()
-        outputfile = open(averagefile,"w")
-        outputfile.write("#  Distance(Ang)     Potential(eV)\n")
-        xdiff = latticelength[idir]/float(ngridpts[idir]-1)
-        for i in range(ngridpts[idir]):
-           x = i*xdiff
-           outputfile.write("%15.8g %15.8g\n" % (x,average[i]))
-        outputfile.close()
-        vacuumE = average[-1]
         if self.solPoisson:
             self.path[imgi].vtot = -vacuumE
         else:
-            # assume vtot0 at zero charge have similar magnitudes along the path,
-            # then for relative energy difference, vtot0 can be ignored
-            self.path[imgi].vtot = numpy.average(average-vacuumE)*0.5
-            # xph: integrate from zero charge for an absolute energy reference
-            # need post processing to calculate the vtot0 for the relaxed structure
-            #vtot_new = numpy.average(average-vacuumE)
-            #self.path[imagi].vtot = (vtot_new + self.path[imagi].vtot0)*0.5
+            try: self.vtot0 += 0 # if vtot0 exists, do nothing
+            except: self.vtot0 = vtot_new # save the first vtot_new as vtot0
+                                          # start from zero charge for absolute reference
+            self.path[imgi].vtot = (self.vtot0 + vtot_new)*0.5
         self.path[imgi].mue[0][0]  = self.epotential - (self.path[imgi]._calc.get_fermi_level() - vacuumE)
         print("image {}, mu of electron: {}, number of electrons: {} ".format(imgi, self.path[imgi].mue[0][0], self.path[imgi].ne))
         #print "done."
@@ -381,7 +298,7 @@ class eneb:
                 self.path[i].f     = self.path[i].get_forces()
                 if self.ss: stt    = self.path[i].get_stress()
                 if self.eneb: 
-                    self.get_vtot(i)
+                    self.get_mue(i)
                     # calculate the eU term and energy correction in electrochemical constant voltage setting
                     self.path[i].u += (self.path[i].ne-self.ne0) * (-self.epotential + self.path[i].vtot)
                 os.chdir('../')
