@@ -14,11 +14,11 @@ Usage:
    - grep FIRE slurm... to check the magnitude of residual forces (force, mu_e)
    - grep electron slurm... for number of electrons and mu_e
 3. Copy the initial and final structures to 0.CON and 6.CON for an eNEB run
-3. Set the optimized number of electrons for the initial and fianl states in ne1=... and ne2=... in example/run_eneb-vasp.py
-4. Submit the slurm job to run run_eneb-vasp.py
+4. Set the optimized number of electrons for the initial and fianl states in ne1=... and ne2=... in example/run_eneb-vasp.py
+5. Submit the slurm job to run run_eneb-vasp.py
    - fe.out shows the residual force after each iteration
    - structure of each image, ?.CON, is updated on the fly. To continue from an existing path, uncomment the lines in run_eneb_vasp.py that read in the path from ?.CON and resubmit the script again.
-5. Check the MEP:
+6. Check the MEP:
    - tail -7 mep.out > neb.dat
    - nebspline.pl (from the VTSTSCRIPTS)
    - The above two commands will produce mep.eps as from a regular NEB run in VTSTcode

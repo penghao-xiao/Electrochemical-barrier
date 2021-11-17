@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 Generalized Atoms calss for optimization of geometry and number of electrons simultaneously under constant voltage
-Contact: Penghao Xiao (pxiao@utexas.edu)
+Contact: Penghao Xiao (pxiao@dal.ca, pxiao@utexas.edu)
 Version: 1.0
 Usage: first set the vacuum/solution along z axis and move the slab to the center of the simulation box
 Please cite the following reference:
@@ -10,23 +10,24 @@ Please cite the following reference:
 from ase import *
 from ase.io import read,write
 from ase import units
-from ase.calculators.vasp import VaspChargeDensity
+from .read_LOCPOT import align_vacuum
 import numpy as np
 
 class eAtoms(Atoms):
     def __init__(self, atomsx, voltage=0.0, solPoisson=True, weight=1.0):
         """ relaxation under constant electrochemical potential
-            voltage ...  The applied voltage wrt SHE
-            solPoisson.. True corresponds to setting the compensate charge in solvent, where VASPsol is required with lambda_d_k=3.0; 
-                         False corresponds to using the uniform background charge and correction scheme by the Neurock group;
+            epotential ... electrochemical potential: the work function of the counter electrode under the given voltage
+                         i.e. voltage vs. SHE + workfunction of SHE
+            solPoisson.. True corresponds to compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
+                         False corresponds to uniform background charge;
         """
         self.atomsx = atomsx 
-        #epotential(phi) is the effective electric potential under the given voltage
+
         self.epotential= -voltage - 4.6
         self.natom = atomsx.get_number_of_atoms()
         self.ne       = np.zeros((1,3)) # number of electrons
         self.mue      = np.zeros((1,3)) # electron mu, dE/dne
-        self.vtot  = 0.0 # average electrostatic potential
+        self.vtot  = 0.0 # shift of the electrostatic potential due to the compensating charge in DFT
         self.direction = 'z'
         self.solPoisson = solPoisson
         self.weight = weight
@@ -50,14 +51,15 @@ class eAtoms(Atoms):
 
     def get_forces(self,apply_constraint=True):
         f    = self.atomsx.get_forces(apply_constraint)
-        #f    = self.atomsx.get_forces()
-        self.get_vtot()
-        #Fc   = np.concatenate((f, self.mue))
+        self.get_mue()
         Fc   = np.vstack((f, self.mue / self.jacobian))
         return Fc
     
     def get_potential_energy(self, force_consistent=False):
         E0 = self.atomsx.get_potential_energy(force_consistent)
+
+        # get the total number of electrons at neutral. 
+        # should have been done in __ini__, but self._calc is not accessible there
         try: 
            self.n0
         except:
@@ -69,106 +71,23 @@ class eAtoms(Atoms):
         E0 += (self.ne[0][0]-self.n0) * (-self.epotential + self.vtot)
         return E0
 
-    def get_vtot(self):
+    def get_mue(self):
         # the initial guess for ne is passed through the calculator
         self.ne[0][0] = self._calc.get_number_of_electrons()
 
-        # the following part is adjusted from vtotav.py in ase_tools
-        # https://github.com/compphys/ase_tools/blob/master/scripts/vtotav.py
-        # First specify location of LOCPOT 
-        LOCPOTfile = 'LOCPOT'
-        # Next the direction to make average in 
-        # input should be x y z, or X Y Z. Default is Z.
-        allowed = "xyzXYZ"
-        if allowed.find(self.direction) == -1 or len(self.direction)!=1 :
-           print("** WARNING: The direction was input incorrectly." )
-           print("** Setting to z-direction by default.")
-        if self.direction.islower():
-           self.direction = self.direction.upper()
-        filesuffix = "_%s" % self.direction
+        # aligh the vacuum level and get the potential shift due to the compensating charge
+        # vacuumE is used when the charge is compensated in solvent by VSAPsol
+        # vtot_new is integrated when the charge is compensated by uniform background charge
+        vacuumE, vtot_new = align_vacuum(direction = self.direction, LOCPOTfile='LOCPOT')
 
-        # Open geometry and density class objects
-        #-----------------------------------------
-        vasp_charge = VaspChargeDensity(filename = LOCPOTfile)
-        potl = vasp_charge.chg[-1]
-        del vasp_charge
-
-        # For LOCPOT files we multiply by the volume to get back to eV
-        potl=potl*self.atomsx.get_volume()
-
-        print("\nReading file: %s" % LOCPOTfile)
-        print("Performing average in %s direction" % self.direction)
-
-        # lattice parameters and scale factor
-        #---------------------------------------------
-        cell = self.atomsx.cell
-
-        # Find length of lattice vectors
-        #--------------------------------
-        latticelength = np.dot(cell, cell.T).diagonal()
-        latticelength = latticelength**0.5
-
-        # Read in potential data
-        #------------------------
-        ngridpts = np.array(potl.shape)
-        totgridpts = ngridpts.prod()
-        #print("Potential stored on a %dx%dx%d grid" % (ngridpts[0],ngridpts[1],ngridpts[2]))
-        #print("Total number of points is %d" % totgridpts)
-        #print("Reading potential data from file...",)
-        #sys.stdout.flush()
-        #print("done." )
-
-        # Perform average
-        #-----------------
-        if self.direction=="X":
-           idir = 0
-           a = 1
-           b = 2
-        elif self.direction=="Y":
-           a = 0
-           idir = 1
-           b = 2
-        else:
-           a = 0
-           b = 1
-           idir = 2
-        a = (idir+1)%3
-        b = (idir+2)%3
-        # At each point, sum over other two indices
-        average = np.zeros(ngridpts[idir],np.float)
-        for ipt in range(ngridpts[idir]):
-           if self.direction=="X":
-              average[ipt] = potl[ipt,:,:].sum()
-           elif self.direction=="Y":
-              average[ipt] = potl[:,ipt,:].sum()
-           else:
-              average[ipt] = potl[:,:,ipt].sum()
-
-        # Scale by number of grid points in the plane.
-        # The resulting unit will be eV.
-        average /= ngridpts[a]*ngridpts[b]
-
-        # Print out average
-        #-------------------
-        averagefile = LOCPOTfile + filesuffix
-        #print("Writing averaged data to file %s..." % averagefile,)
-        #sys.stdout.flush()
-        outputfile = open(averagefile,"w")
-        outputfile.write("#  Distance(Ang)     Potential(eV)\n")
-        xdiff = latticelength[idir]/float(ngridpts[idir]-1)
-        for i in range(ngridpts[idir]):
-           x = i*xdiff
-           outputfile.write("%15.8g %15.8g\n" % (x,average[i]))
-        outputfile.close()
-        vacuumE = average[-1]
         if self.solPoisson:
             self.vtot = -vacuumE
         else:
-            vtot_new = np.average(average-vacuumE)
+            # start from zero charge for absolute reference
             try: self.vtot0 += 0 # if vtot0 exists, do nothing
             except: self.vtot0 = vtot_new # save the first vtot_new as vtot0
-                                          # start from zero charge for absolute reference
             self.vtot = (self.vtot0 + vtot_new)*0.5
+
         self.mue[0][0]  = self.epotential - (self._calc.get_fermi_level() - vacuumE)
         print("mu of electron: ", self.mue)
         print("number of electrons: ", self.ne)
