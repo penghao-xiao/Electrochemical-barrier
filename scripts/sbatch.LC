@@ -1,9 +1,0 @@
-#!/bin/bash
-#SBATCH -N 3
-#SBATCH -p pdebug
-#SBATCH -A your_account
-#SBATCH -t 00:30:00
-#SBATCH -J eneb_test
-
-#python3-3.6.4 constV_opt.py
-python3-3.6.4 run_eneb-vasp.py

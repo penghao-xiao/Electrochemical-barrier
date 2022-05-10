@@ -14,12 +14,18 @@ from .read_LOCPOT import align_vacuum
 import numpy as np
 
 class eAtoms(Atoms):
-    def __init__(self, atomsx, voltage=0.0, solPoisson=True, weight=1.0):
+    def __init__(self, atomsx, voltage=0.0, solPoisson=True, weight=1.0, e_only=False):
         """ relaxation under constant electrochemical potential
-            epotential ... electrochemical potential: the work function of the counter electrode under the given voltage
-                         i.e. voltage vs. SHE + workfunction of SHE
-            solPoisson.. True corresponds to compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
-                         False corresponds to uniform background charge;
+            epotential ... real,
+                           electrochemical potential: the work function of the counter electrode under the given voltage
+                           i.e. voltage vs. SHE + workfunction of SHE
+            solPoisson ... bool,
+                           True : compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
+                           False: uniform background charge;
+            weight     ... real >0, 
+                           weight of the number of electrons vs. atomic positions, 
+            e_only     ... bool, 
+                           True: only optimize the number of electrons, corresponding to weight=infinity. 
         """
         self.atomsx = atomsx 
 
@@ -31,6 +37,7 @@ class eAtoms(Atoms):
         self.direction = 'z'
         self.solPoisson = solPoisson
         self.weight = weight
+        self.e_only = e_only
         self.jacobian = self.weight
 
         Atoms.__init__(self,atomsx)
@@ -52,7 +59,10 @@ class eAtoms(Atoms):
     def get_forces(self,apply_constraint=True):
         f    = self.atomsx.get_forces(apply_constraint)
         self.get_mue()
-        Fc   = np.vstack((f, self.mue / self.jacobian))
+        if self.e_only:
+            Fc   = np.vstack((f*0.0, self.mue / self.jacobian))
+        else:
+            Fc   = np.vstack((f, self.mue / self.jacobian))
         return Fc
     
     def get_potential_energy(self, force_consistent=False):
