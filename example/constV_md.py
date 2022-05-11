@@ -4,18 +4,15 @@
 '''
 
 from ase.optimize.fire import FIRE
-from ase import *
 from ase.io import read,write
-import os
-import sys
-import numpy as np
 from ecb.eAtoms import eAtoms
 from ase.calculators.vasp import Vasp
+import os
 
-ncc = 100 # md steps with constant charge. Number of electrons is optimized (voltage control) every ncc steps.
-total_steps = 10000 # total MD steps. 
-nloops = int(total_steps/ncc) # number of outmost loops 
-maxne = 50 # max number of steps for optimizing number of electrons 
+steps_cc = 2 # md steps with constant charge. Number of electrons is optimized (voltage control) every ncc steps.
+steps_total = 6 # total MD steps. 
+nloops = int(steps_total/steps_cc) # number of outmost loops 
+maxne = 1 # max number of steps for optimizing number of electrons 
 
 p1 = read('0.CON',format='vasp')
 
@@ -28,7 +25,7 @@ calc = Vasp(prec = 'Normal',
             #lvdw = True,
             lcharg = False,
             isym = 0,
-            npar = 4,
+            npar = 2,
             nsim = 4,
             algo = 'Fast',
             lreal= 'Auto',
@@ -40,7 +37,7 @@ calc = Vasp(prec = 'Normal',
             lmaxmix   = 4,
             lvtot = True, 
             lvhar = True, 
-            ispin = 2,
+            ispin = 1,
             nelm  = 60,
             lsol= True,
             eb_k=80,
@@ -50,25 +47,49 @@ calc = Vasp(prec = 'Normal',
             # md:
             ibrion = 0, 
             potim  = 0.5, 
-            nsw    = ncc, 
+            nsw    = steps_cc, 
             mdalgo = 1, 
             andersen_prob = 0.1, 
             tebeg  = 300, 
               )
 p1.set_calculator(calc)
-#print p1.get_potential_energy()
+p1.get_potential_energy()
 
-p1box = eAtoms(p1, voltage=-1.0, e_only=True)
-
+# temporary folder for optimize ne
+tmpdir = 'tmp'
+if not os.path.exists(tmpdir):
+    os.mkdir(tmpdir)
 # MD with a discrete voltage control
 for i in range(nloops):
-    # constant charge MD by vasp
-    p1box._calc.set(nsw = ncc)
-    p1box.get_potential_energy() # enthalpy including the work term
-    p1box._calc.set(nsw = 0)
     # ASE optimizor for ne, for ase.3.15 and later
-    dyn = FIRE(p1box, maxmove = 0.1, dt = 0.1, dtmax = 0.1, force_consistent = False)
+    os.chdir(tmpdir)
+    os.system('cp ../WAVECAR ./')
+    p1ext = eAtoms(p1, voltage=-1.0, e_only=True)
+    p1ext._calc.set(nsw = 0)
+    dyn = FIRE(p1ext, maxstep = 0.1, dt = 0.1, dtmax = 0.1, force_consistent = False)
     dyn.run(fmax=0.01, steps=maxne)
+
+    p1._calc.set(nelect = p1ext.ne[0][0])
+    p1._calc.set(nsw = steps_cc)
+    os.chdir('../')
+    os.system('cp CONTCAR POSCAR')
+
+    trajdir = 'traj_'+str(i)
+    if not os.path.exists(trajdir):
+        os.mkdir(trajdir)
+        os.system('cp XDATCAR OUTCAR INCAR '+trajdir)
+    # constant charge MD by vasp
+    p1._calc.write_incar(p1)
+    # Execute VASP
+    command = p1._calc.make_command(p1._calc.command)
+    with p1._calc._txt_outstream() as out:
+        errorcode = p1._calc._run(command=command,
+                                  out=out,
+                                  directory=p1._calc.directory)
+    # Read output
+    atoms_sorted = read('CONTCAR', format='vasp')
+    # Update atomic positions and unit cell with the ones read from CONTCAR.
+    p1.positions = atoms_sorted[p1._calc.resort].positions
 
 write("CONTCAR_Vot.vasp",p1,format='vasp',vasp5=True, direct=True)
 
