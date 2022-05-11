@@ -5,11 +5,7 @@ Cell optimization example using mushy box with shear stress applied
 '''
 
 from ase.optimize.fire import FIRE
-from ase import *
 from ase.io import read,write
-import os
-import sys
-import numpy as np
 from ecb.eAtoms import eAtoms
 from ase.calculators.vasp import Vasp
 
