@@ -6,7 +6,7 @@ Install:
  2. pip3 install --upgrade --user ase  
  3. Set ASE with VASPsol as the binary, see script/run_vasp.py for the srun/mpirun setting
     (potcar files and others, see https://wiki.fysik.dtu.dk/ase/ase/calculators/vasp.html#environment-variables)
- 4. In bash_profile: export PYTHONPATH = $PYTHONPATH:your_path/Electrochemical-barrier/
+ 4. In bash_profile: export PYTHONPATH=$PYTHONPATH:your_path/Electrochemical-barrier/
 
 Usage:
 1. Before doing any calculation, first set the vacuum/solution along the z axis and move the slab to the center of the simulation box using scripts/center_slab.py (do not run the script separately for the initial and final states because there could be some small mismatch for the substrate.)
