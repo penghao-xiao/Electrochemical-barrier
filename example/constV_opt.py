@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 '''
 
-Cell optimization example using mushy box with shear stress applied
+Structure optimization example under constant voltage with respect to SHE
+
+The code will use the last line in LOCPOT_Z to aligh the Fermi level, so
+1. make sure the vacuum is in the third (c or z) axis
+2. put the slab in the center of c
+
 '''
 
 from ase.optimize.fire import FIRE
@@ -20,7 +25,7 @@ calc = Vasp(prec = 'Normal',
             #lvdw = True,
             lcharg = False,
             isym = 0,
-            npar = 4,
+            ncore = 16, # change according to your machine
             nsim = 4,
             algo = 'All',
             lreal= 'Auto',
@@ -29,8 +34,7 @@ calc = Vasp(prec = 'Normal',
             encut= 400,
             #ismear = 0,
             #sigma  = 0.05,
-            lmaxmix   = 4,
-            lvtot = True, 
+            #lmaxmix   = 4,
             lvhar = True, 
             ispin = 2,
             nelm  = 60,
