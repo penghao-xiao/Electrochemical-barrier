@@ -14,11 +14,10 @@ from .read_LOCPOT import align_vacuum
 import numpy as np
 
 class eAtoms(Atoms):
-    def __init__(self, atomsx, voltage=0.0, solPoisson=True, weight=1.0, e_only=False):
+    def __init__(self, atomsx, voltage=0.0, Ef_ref=-4.6, solPoisson=True, weight=1.0, e_only=False, slab_norm='z'):
         """ relaxation under constant electrochemical potential
-            epotential ... real,
-                           electrochemical potential: the work function of the counter electrode under the given voltage
-                           i.e. voltage vs. SHE + workfunction of SHE
+            voltage    ... real, applied voltage wrt the reference electrode
+            Ef_ref     ... real, Fermi level of the reference electrode. Default: -4.6 for SHE. 
             solPoisson ... bool,
                            True : compensate charge in the solvent, where VASPsol is required with lambda_d_k=3.0; 
                            False: uniform background charge;
@@ -26,15 +25,20 @@ class eAtoms(Atoms):
                            weight of the number of electrons vs. atomic positions, 
             e_only     ... bool, 
                            True: only optimize the number of electrons, corresponding to weight=infinity. 
+            slab_norm  ... string in ('x', 'y', 'z') 
+                           along which direction the vacuum is
+
         """
         self.atomsx = atomsx 
 
-        self.epotential= -voltage - 4.6
+        #electrochemical potential: the work function of the counter electrode under the given voltage
+        #                           i.e. voltage vs. SHE + workfunction of SHE
+        self.epotential= -voltage + Ef_ref
         self.natom = atomsx.get_number_of_atoms()
         self.ne       = np.zeros((1,3)) # number of electrons
         self.mue      = np.zeros((1,3)) # electron mu, dE/dne
         self.vtot  = 0.0 # shift of the electrostatic potential due to the compensating charge in DFT
-        self.direction = 'z'
+        self.direction = slab_norm
         self.solPoisson = solPoisson
         self.weight = weight
         self.e_only = e_only

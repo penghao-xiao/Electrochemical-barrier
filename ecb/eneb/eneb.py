@@ -38,7 +38,7 @@ class eneb:
     def __init__(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       \
                  dneb = False, dnebOrg = False, method = 'normal',            \
                  onlyci = False, weight = 1, parallel = False, ss = False,    \
-                 eneb = True, voltage=0.0, Ef_ref = -4.6, ne1=0.0, ne2=0.0, ne0=0.0, eweight=0.0, solPoisson=True,\
+                 eneb = True, voltage=0.0, Ef_ref = -4.6, ne1=0.0, ne2=0.0, ne0=0.0, eweight=0.0, solPoisson=True, slab_norm='z', \
                  express = numpy.zeros((3,3)), fixstrain = numpy.ones((3,3)) ):
         """
         The neb constructor.
@@ -68,6 +68,7 @@ class eneb:
             solPoisson.. True  - set compensate charges in the solvent, where VASPsol is required with lambda_d_k=3.0; 
                          False - use uniform background charges and the correction scheme from the Neurock group (PRB 73, 165402 (2006));
                                  False needs to start the integration from zero charge for a common reference, still under test.
+            slab_norm... string in ('x', 'y', 'z'), along which direction the vacuum is
         """
 
         self.numImages = numImages
@@ -93,7 +94,7 @@ class eneb:
         self.ne0 = ne0 # number of electrons at zero charge
         self.eweight = eweight
         self.solPoisson = solPoisson
-        self.direction = 'z' # slab norm direction
+        self.direction = slab_norm # slab norm direction
 
         # check the orientation of the cell, make sure a is along x, b is on xoy plane
         if self.ss: 
