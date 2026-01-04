@@ -51,7 +51,7 @@ calc = Vasp(prec = 'Normal',
             andersen_prob = 0.1, 
             tebeg  = 300, 
               )
-p1.set_calculator(calc)
+p1.calc=calc
 p1.get_potential_energy()
 
 # temporary folder for optimize ne
@@ -65,7 +65,7 @@ for i in range(nloops):
     os.system('cp ../WAVECAR ./')
     p1ext = eAtoms(p1, voltage=-1.0, e_only=True)
     p1ext._calc.set(nsw = 0)
-    dyn = FIRE(p1ext, maxstep = 0.1, dt = 0.1, dtmax = 0.1, force_consistent = False)
+    dyn = FIRE(p1ext, maxstep = 0.1, dt = 0.1, dtmax = 0.1)
     dyn.run(fmax=0.01, steps=maxne)
 
     p1._calc.set(nelect = p1ext.ne[0][0])

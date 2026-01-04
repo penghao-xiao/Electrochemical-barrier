@@ -4,6 +4,8 @@
 Neb optimization example
 '''
 
+import sys
+sys.path.append(r"/public1/home/sch3687/software-sch3687/Electrochemical-barrier/")
 from ecb.eneb import eneb, qm_essneb
 #from tsase.calculators.vasp_ext import Vasp
 from ase.calculators.vasp import Vasp
@@ -16,15 +18,16 @@ p2 = read('6.CON',format='vasp')
 #calc = LAMMPS(parameters=parameters, tmp_dir="trash")
 calc = Vasp(prec = 'Normal', 
             ediff = 1e-5,
-            kpts = (2,2,1),
+            kpts = (1,1,1),
             gamma = True,
-            xc = 'rPBE',
+            xc = 'PBE',
             lcharg = False,
             isym = 0,
             ncore = 16,
             nsim = 4,
             lreal= 'Auto',
             algo= 'Normal',
+            mpar=16,
             encut= 400,
             lplane=True,
             isif = 0,

@@ -1,6 +1,12 @@
 # Electrochemical-barrier
 This package performs structure optimization and saddle search under constant potential. The geometry and number of electrons are optimized simultaneously without adding significant overhead compared to constant-charge calculations. The current implementation is based on ASE and VASPsol. 
 
+**Updates in this version:**
+- Compatible with **ASE 3.25.0**.
+- Added support for **VASPsol++** (in addition to the standard VASPsol).
+
+The current implementation is based on ASE and VASPsol/VASPsol++.
+
 Install:
  1. Make sure VASPsol is compided
  2. pip3 install --upgrade --user ase  

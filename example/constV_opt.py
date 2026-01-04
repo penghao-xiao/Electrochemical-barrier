@@ -21,11 +21,11 @@ calc = Vasp(prec = 'Normal',
             #kpts = (2,2,1),
             kpts = (1,1,1),
             gamma= True,
-            xc = 'rPBE',
+            xc = 'PBE',
             #lvdw = True,
             lcharg = False,
             isym = 0,
-            ncore = 16, # change according to your machine
+            npar = 8, # change according to your machine
             nsim = 4,
             algo = 'All',
             lreal= 'Auto',
@@ -42,15 +42,15 @@ calc = Vasp(prec = 'Normal',
             eb_k=80,
             tau=0,
             lambda_d_k=3.0,
-            nelect = 317.1999
+            #####nelect = 317.1999
               )
-p1.set_calculator(calc)
+p1.calc=calc
 #print p1.get_potential_energy()
 
-p1box = eAtoms(p1, voltage = -1.0)
+p1box = eAtoms(p1, voltage = 0)
 
 # for ase.3.15 and later
-dyn = FIRE(p1box,maxmove = 0.1, dt = 0.1, dtmax = 0.1, force_consistent = False)
+dyn = FIRE(p1box,maxmove = 0.1, dt = 0.1, dtmax = 0.1)
 #dyn = MDMin(p1box, dt=0.1, force_consistent = False)
 dyn.run(fmax=0.01, steps=1)
 

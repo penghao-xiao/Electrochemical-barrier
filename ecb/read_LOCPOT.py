@@ -49,12 +49,31 @@ class VaspLocpot:
 
         """
         import ase.io.vasp as aiv
+        import tempfile
         with open(filename,'r') as fd:
-            try:
-                atoms = aiv.read_vasp(fd)
-            except (IOError, ValueError, IndexError):
-                return print('Error reading in initial atomic structure.')
-            fd.readline()
+            header_lines = []
+            for _ in range(5): 
+                header_lines.append(fd.readline())
+            elements_line = fd.readline()
+            header_lines.append(elements_line)
+            num_atoms_line = fd.readline()
+            header_lines.append(num_atoms_line)
+            num_atoms = sum(map(int, num_atoms_line.strip().split()))
+            coord_type_line = fd.readline()
+            header_lines.append(coord_type_line)
+    
+            for _ in range(num_atoms):
+                header_lines.append(fd.readline())
+            with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tmp:
+                tmp.writelines(header_lines)
+                tmp.flush()
+                tmp.seek(0)
+                try:
+                    atoms = aiv.read_vasp(tmp.name)
+                except (IOError, ValueError, IndexError):
+                    return print('Error reading in atomic structure from LOCPOT header.') 
+
+            fd.readline() 
             ngr = fd.readline().split()
             ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
             pot = np.empty(ng)
