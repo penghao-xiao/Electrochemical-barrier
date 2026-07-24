@@ -329,8 +329,10 @@ class eneb:
             strain = numpy.dot(self.path[0].icell, dcell)
             pv     = numpy.vdot(self.express, strain) * self.path[0].get_volume()
             if (not self.parallel) or (self.parallel and self.rank == 0):
-                #print "i,pv:",i,pv
-                print("i,mue:", i, self.path[i].mue)
+                if self.ss: 
+                    print("i,pv:", i, pv)
+                if self.eneb:
+                    print("i,mue:", i, self.path[i].mue)
             self.path[i].u += pv
 
             if i == 1 or self.path[i].u > self.Umax:
